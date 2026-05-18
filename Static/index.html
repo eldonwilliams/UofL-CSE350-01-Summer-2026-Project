@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Collaborative Whiteboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #canvas { border: 2px solid #333; cursor: crosshair; background: white; border-radius: 8px; }
+        .controls { margin-bottom: 10px; padding: 10px; background: #f0f0f0; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h2>Collaborative Whiteboard</h2>
+    <div class="controls">
+        <input type="color" id="colorPicker" value="#000000">
+        <input type="range" id="sizePicker" min="1" max="20" value="5">
+        <button onclick="clearCanvas()">Limpiar Pizarra</button>
+        <button onclick="undoLast()">Undo</button>
+        <button onclick="redoLast()">Redo</button>
+        <button onclick="saveImage()">Save as Image</button>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+        let stompClient = null;
+        const clientId = Math.random().toString(36).substring(2, 15);
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let messageHistory = []; // Global history of all drawing messages
+        const redoHistory = new Map(); // To track undone strokes for redo
+        const lastPositions = new Map(); // To track strokes from multiple users
+        let drawing = false;
+
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Connect to the WebSocket
+        function connect() {
+            // Use relative path for production deployment compatibility
+            // If frontend and backend are on different ports, use 'http://localhost:8080/ws-whiteboard'
+            const socket = new SockJS('/ws-whiteboard');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, (frame) => {
+                console.log('Conectado: ' + frame);
+                
+                // 2. Subscribe to the channel where drawings from others are received
+                stompClient.subscribe('/topic/canvas', (message) => {
+                    const drawData = JSON.parse(message.body);
+                    if (drawData.senderId !== clientId) {
+                        handleRemoteDraw(drawData);
+                    }
+                });
+            });
+        }
+
+        // Notify others when color changes
+        document.getElementById('colorPicker').addEventListener('change', () => {
+            sendMessage("COLOR_CHANGE", 0, 0);
+        });
+
+        function sendMessage(type, x, y, extra = {}) {
+            if (stompClient && stompClient.connected) {
+                stompClient.send("/app/draw", {}, JSON.stringify({
+                    type: type,
+                    x: x,
+                    y: y,
+                    color: document.getElementById('colorPicker').value,
+                    size: document.getElementById('sizePicker').value,
+                    senderId: clientId,
+                    ...extra
+                }));
+            }
+        }
+
+        function clearCanvas() {
+            handleRemoteDraw({ type: 'CLEAR', senderId: clientId });
+            sendMessage("CLEAR", 0, 0);
+        }
+
+        function undoLast() {
+            handleRemoteDraw({ type: 'UNDO', senderId: clientId });
+            sendMessage("UNDO", 0, 0);
+        }
+
+        function redoLast() {
+            handleRemoteDraw({ type: 'REDO', senderId: clientId });
+            sendMessage("REDO", 0, 0);
+        }
+
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = 'whiteboard-export.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            const pos = { x: e.offsetX, y: e.offsetY };
+            handleRemoteDraw({ type: 'START', x: pos.x, y: pos.y, senderId: clientId }); // Immediate local drawing
+            sendMessage("START", pos.x, pos.y);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (drawing) {
+                const pos = { x: e.offsetX, y: e.offsetY };
+                handleRemoteDraw({ type: 'DRAW', x: pos.x, y: pos.y, senderId: clientId, color: document.getElementById('colorPicker').value, size: document.getElementById('sizePicker').value });
+                sendMessage("DRAW", e.offsetX, e.offsetY);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!drawing) return;
+            drawing = false;
+            handleRemoteDraw({ type: 'STOP', x: 0, y: 0, senderId: clientId }); // Crucial for local Undo history
+            sendMessage("STOP", 0, 0);
+        });
+
+        function handleRemoteDraw(data) {
+            if (data.type === 'COLOR_CHANGE') {
+                console.log(`User ${data.senderId} changed color to ${data.color}`);
+                return;
+            }
+
+            if (data.type === 'UNDO') {
+                undoStroke(data.senderId);
+                return;
+            }
+
+            if (data.type === 'REDO') {
+                redoStroke(data.senderId);
+                return;
+            }
+
+            if (data.type === 'CLEAR') {
+                messageHistory = [];
+                redoHistory.clear();
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            if (data.type === 'START') {
+                redoHistory.delete(data.senderId); // New action clears redo stack for that user
+            }
+
+            // Add to history and draw
+            messageHistory.push(data);
+            processDrawAction(data);
+        }
+
+        // Encapsulated logic to draw a single action
+        function processDrawAction(data) {
+            if (data.type === 'START' || data.type === 'STOP') {
+                lastPositions.set(data.senderId, { x: data.x, y: data.y });
+                if (data.type === 'STOP') lastPositions.delete(data.senderId);
+            } else if (data.type === 'DRAW' && lastPositions.has(data.senderId)) {
+                const lastPos = lastPositions.get(data.senderId);
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(lastPos.x, lastPos.y);
+                ctx.lineTo(data.x, data.y);
+                ctx.strokeStyle = data.color;
+                ctx.lineWidth = data.size;
+                ctx.stroke();
+                lastPositions.set(data.senderId, { x: data.x, y: data.y });
+            }
+        }
+
+        function undoStroke(userId) {
+            // Find the last stroke (from STOP back to START) for this specific user
+            let lastStopIndex = -1;
+            for (let i = messageHistory.length - 1; i >= 0; i--) {
+                if (messageHistory[i].senderId === userId && messageHistory[i].type === 'STOP') {
+                    lastStopIndex = i;
+                    break;
+                }
+            }
+
+            if (lastStopIndex !== -1) {
+                // Find the START of that stroke
+                let startIndex = lastStopIndex;
+                while (startIndex >= 0 && !(messageHistory[startIndex].senderId === userId && messageHistory[startIndex].type === 'START')) {
+                    startIndex--;
+                }
+                // Remove that segment from history
+                const stroke = messageHistory.splice(startIndex, lastStopIndex - startIndex + 1);
+                
+                // Save to redo history
+                if (!redoHistory.has(userId)) redoHistory.set(userId, []);
+                redoHistory.get(userId).push(stroke);
+                
+                redrawAll();
+            }
+        }
+
+        function redoStroke(userId) {
+            const userRedoStack = redoHistory.get(userId);
+            if (userRedoStack && userRedoStack.length > 0) {
+                const stroke = userRedoStack.pop();
+                messageHistory.push(...stroke);
+                redrawAll();
+            }
+        }
+
+        function redrawAll() {
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            lastPositions.clear();
+            messageHistory.forEach(action => processDrawAction(action));
+        }
+
+        connect();
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "uofl-whiteboard-project",
+  "version": "1.0.0",
+  "description": "Real-time collaborative whiteboard project",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  },
+  "author": "UofL Student",
+  "license": "MIT"
+}
