@@ -7,3 +7,5 @@ A real-time, collaborative virtual whiteboard web application that enables multi
 
 For the front end we will be using Java Script and for the backend we are going to use Java
 
+To be able to compile the code you should install:
+Maven Apache and JDK17

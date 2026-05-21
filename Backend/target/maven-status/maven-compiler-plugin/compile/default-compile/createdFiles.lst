@@ -1,0 +1,5 @@
+com\example\whiteboard\controller\WhiteboardController.class
+com\example\whiteboard\model\DrawMessage$MessageType.class
+com\example\whiteboard\config\WebSocketConfig.class
+com\example\whiteboard\WhiteboardApplication.class
+com\example\whiteboard\model\DrawMessage.class
