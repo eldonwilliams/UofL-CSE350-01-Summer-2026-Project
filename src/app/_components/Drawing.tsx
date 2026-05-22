@@ -13,17 +13,21 @@ enum Tool {
 // Reusable component for drawing on a canvas element.
 export default function Drawing() {
 	const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
-	const [points, setPoints] = useState<[number, number][]>([]);
+	const [points, setPoints] = useState<[number, number, string][]>([]);
 	const [activeTool, setActiveTool] = useState<Tool>(Tool.Brush);
 
 	useEffect(() => {
 		const ctx = drawingCanvasRef.current?.getContext("2d");
-		ctx?.clearRect(0, 0, 500, 500);
-		points.forEach(([x, y]) => {
-			ctx?.beginPath();
-			ctx?.arc(x, y, 5, 0, 2 * Math.PI);
-			ctx?.fill();
+		if (!ctx) return;
+		ctx.clearRect(0, 0, 500, 500);
+		const previousColor = ctx.fillStyle;
+		points.forEach(([x, y, color]) => {
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(x, y, 5, 0, 2 * Math.PI);
+			ctx.fill();
 		});
+		ctx.fillStyle = previousColor;
 	}, [points, setPoints, drawingCanvasRef]);
 
 	const handleDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -32,7 +36,7 @@ export default function Drawing() {
 		const x = e.clientX - rect.left;
 		const y = e.clientY - rect.top;
 		if (activeTool === Tool.Brush) {
-			setPoints((prev) => [...prev, [x, y]]);
+			setPoints((prev) => [...prev, [x, y, "#000"]]);
 		} else if (activeTool === Tool.Eraser) {
 			setPoints((prev) => prev.filter(([px, py]) => Math.hypot(px - x, py - y) > 10));
 		}
