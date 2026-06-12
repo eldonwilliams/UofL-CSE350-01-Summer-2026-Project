@@ -105,7 +105,7 @@ export default function Drawing() {
         <ButtonGroup className="mt-4">
           <ButtonGroup>
             <ButtonGroupText asChild>
-              <p htmlFor="name">Actions</p>
+              <p>Actions</p>
             </ButtonGroupText>
             <Button variant="outline" size="icon" onClick={() => setPoints([])}>
               <Trash2Icon />
@@ -121,7 +121,7 @@ export default function Drawing() {
           </ButtonGroup>
           <ButtonGroup>
             <ButtonGroupText asChild>
-              <p htmlFor="name">Tools</p>
+              <p>Tools</p>
             </ButtonGroupText>
             <Button
               variant="outline"
@@ -142,7 +142,7 @@ export default function Drawing() {
           </ButtonGroup>
           <ButtonGroup>
             <ButtonGroupText asChild>
-              <p htmlFor="name">Settings</p>
+              <p>Settings</p>
             </ButtonGroupText>
             <Popover>
               <PopoverTrigger asChild>
