@@ -34,7 +34,7 @@ export function useEyeDropper() {
       const result = await eyeDropper.open();
       setColor(result.sRGBHex);
       return result.sRGBHex;
-    } catch (err: any) {
+    } catch (err) {
       // Handle user cancellation or other errors
       if (err instanceof Error && err.name !== 'AbortError') {
         setError(err.message);
