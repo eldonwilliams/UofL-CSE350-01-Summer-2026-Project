@@ -2,6 +2,7 @@
 
 import {
   BrushIcon,
+  DownloadCloudIcon,
   EraserIcon,
   PaletteIcon,
   PipetteIcon,
@@ -18,6 +19,11 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Slider } from "~/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { useEyeDropper } from "~/lib/useEyedrop";
 
 enum Tool {
@@ -104,6 +110,14 @@ export default function Drawing() {
             <Button variant="outline" size="icon" onClick={() => setPoints([])}>
               <Trash2Icon />
             </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <DownloadCloudIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Not implemented yet, coming soon.</TooltipContent>
+            </Tooltip>
           </ButtonGroup>
           <ButtonGroup>
             <ButtonGroupText asChild>
@@ -188,7 +202,7 @@ export default function Drawing() {
                 className="rounded-full"
                 style={{
                   width: toolSettings.size * 2.5,
-									height: toolSettings.size * 2.5,
+                  height: toolSettings.size * 2.5,
                   backgroundColor: toolSettings.color,
                 }}
               ></div>
