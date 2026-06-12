@@ -28,7 +28,7 @@ export default async function Home() {
 						</Avatar>
 					</AvatarGroup>
 				</div>
-				<div className="pt-16">{"*Room UI is placeholder only and no functionality is implemented. Coming soon."}</div>
+				<div className="pt-16 text-accent-foreground">{"*Room UI is placeholder only and no functionality is implemented. Coming soon."}</div>
       </div>
     </main>
   );
