@@ -2,10 +2,14 @@ import { Link2Icon, LogOutIcon } from "lucide-react";
 import Drawing from "./_components/Drawing";
 import { Button } from "~/components/ui/button";
 import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup } from "~/components/ui/avatar";
+import { ThemeToggle } from "~/components/ui/ThemeToggle";
 
 export default async function Home() {
-  return (
-    <main>
+	return (
+		<main className="min-h-screen bg-background text-foreground transition-colors duration-300">
+			<div className="absolute top-4 right-4 z-50">
+				<ThemeToggle />
+			</div>
 			<div className="flex flex-col items-center">
 				<p className="text-2xl font-bold pt-4">Drawing Demo</p>
 				<Drawing />
@@ -15,7 +19,7 @@ export default async function Home() {
 						<p className="font-light text-accent-foreground">{"2/10"}</p>
 						<Button><Link2Icon /> Share</Button>
 						<Button variant="destructive"><LogOutIcon /> Leave</Button>
-						
+
 					</div>
 					<AvatarGroup>
 						<Avatar>
@@ -29,7 +33,7 @@ export default async function Home() {
 					</AvatarGroup>
 				</div>
 				<div className="pt-16 text-accent-foreground">{"*Room UI is placeholder only and no functionality is implemented. Coming soon."}</div>
-      </div>
-    </main>
-  );
+			</div>
+		</main>
+	);
 }
