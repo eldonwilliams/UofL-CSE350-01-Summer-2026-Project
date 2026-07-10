@@ -56,6 +56,9 @@ type DrawingItem = {
   color: string;
 };
 
+// Represents all the data needed to reender to the canvas, collection of drawing items. May be reworked
+export type CanvasData = DrawingItem[];
+
 /**
  * Preset colors for the palette picker grid.
  */
@@ -71,8 +74,10 @@ const colors: { name: string; hex: string }[] = [
 ];
 
 function resolveColor(original: string, isDark: boolean): string {
-  if (isDark && (original === "#000000" || original === "#000")) return "#ffffff";
-  if (!isDark && (original === "#ffffff" || original === "#fff")) return "#000000";
+  if (isDark && (original === "#000000" || original === "#000"))
+    return "#ffffff";
+  if (!isDark && (original === "#ffffff" || original === "#fff"))
+    return "#000000";
   return original;
 }
 
@@ -144,14 +149,24 @@ function renderDrawingItems(
   }
 }
 
+export type DrawingProps = {
+  canvas?: CanvasData; // The canvas to be rendered onto the drawing
+  canvasUpdate?: (data: CanvasData) => void; // Recieves updates regarding the rendered data, should update canvas
+};
+
 // Reusable component for drawing on a canvas element.
-export default function Drawing() {
+export default function Drawing({ canvas, canvasUpdate }: DrawingProps) {
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [strokes, setStrokes] = useState<DrawingItem[]>([]);
+  const [localCanvasData, setLocalCanvasData] = useState<CanvasData>([]);
+  const [canvasData, setCanvasData] = canvas
+    ? [canvas, canvasUpdate]
+    : [localCanvasData, setLocalCanvasData];
   const [redoStack, setRedoStack] = useState<DrawingItem[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>(Tool.Brush);
-  const [selectedShapeTool, setSelectedShapeTool] = useState<Tool.Line | Tool.Rectangle | Tool.Circle>(Tool.Rectangle);
+  const [selectedShapeTool, setSelectedShapeTool] = useState<
+    Tool.Line | Tool.Rectangle | Tool.Circle
+  >(Tool.Rectangle);
   const [toolSettings, setToolSettings] = useState<ToolSettings>({
     size: 1,
     color: "#000000",
@@ -176,10 +191,16 @@ export default function Drawing() {
 
   useEffect(() => {
     setToolSettings((settings) => {
-      if (isDark && (settings.color === "#000000" || settings.color === "#000")) {
+      if (
+        isDark &&
+        (settings.color === "#000000" || settings.color === "#000")
+      ) {
         return { ...settings, color: "#ffffff" };
       }
-      if (!isDark && (settings.color === "#ffffff" || settings.color === "#fff")) {
+      if (
+        !isDark &&
+        (settings.color === "#ffffff" || settings.color === "#fff")
+      ) {
         return { ...settings, color: "#000000" };
       }
       return settings;
@@ -187,14 +208,17 @@ export default function Drawing() {
   }, [isDark]);
 
   useEffect(() => {
-    setToolSettings((settings) => ({ ...settings, color: color ?? (isDark ? "#ffffff" : "#000000") }));
+    setToolSettings((settings) => ({
+      ...settings,
+      color: color ?? (isDark ? "#ffffff" : "#000000"),
+    }));
   }, [color, isDark]);
 
   useEffect(() => {
     const ctx = drawingCanvasRef.current?.getContext("2d");
     if (!ctx) return;
-    renderDrawingItems(ctx, strokes, isDark, 500, 500);
-  }, [strokes, drawingCanvasRef, isDark]);
+    renderDrawingItems(ctx, canvasData, isDark, 500, 500);
+  }, [canvasData, drawingCanvasRef, isDark]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = drawingCanvasRef.current?.getBoundingClientRect();
@@ -204,15 +228,17 @@ export default function Drawing() {
 
     if (activeTool === Tool.Eraser) {
       setRedoStack([]);
-      setStrokes((prev) =>
-        prev.filter((item) => {
+      setCanvasData(
+        canvasData.filter((item) => {
           if (item.points.length === 0) return true;
 
           const [startX, startY] = item.points[0]!;
           const [endX, endY] = item.points[item.points.length - 1]!;
 
           if (item.type === "brush") {
-            return !item.points.some(([px, py]) => Math.hypot(px - x, py - y) <= 10);
+            return !item.points.some(
+              ([px, py]) => Math.hypot(px - x, py - y) <= 10,
+            );
           }
           if (item.type === "line") {
             const dist = distToSegment([x, y], [startX, startY], [endX, endY]);
@@ -220,10 +246,18 @@ export default function Drawing() {
           }
           if (item.type === "rectangle") {
             const onBorder =
-              Math.abs(x - startX) <= 10 && y >= Math.min(startY, endY) && y <= Math.max(startY, endY) ||
-              Math.abs(x - endX) <= 10 && y >= Math.min(startY, endY) && y <= Math.max(startY, endY) ||
-              Math.abs(y - startY) <= 10 && x >= Math.min(startX, endX) && x <= Math.max(startX, endX) ||
-              Math.abs(y - endY) <= 10 && x >= Math.min(startX, endX) && x <= Math.max(startX, endX);
+              (Math.abs(x - startX) <= 10 &&
+                y >= Math.min(startY, endY) &&
+                y <= Math.max(startY, endY)) ||
+              (Math.abs(x - endX) <= 10 &&
+                y >= Math.min(startY, endY) &&
+                y <= Math.max(startY, endY)) ||
+              (Math.abs(y - startY) <= 10 &&
+                x >= Math.min(startX, endX) &&
+                x <= Math.max(startX, endX)) ||
+              (Math.abs(y - endY) <= 10 &&
+                x >= Math.min(startX, endX) &&
+                x <= Math.max(startX, endX));
             return !onBorder;
           }
           if (item.type === "circle") {
@@ -243,8 +277,8 @@ export default function Drawing() {
       else if (activeTool === Tool.Rectangle) itemType = "rectangle";
       else if (activeTool === Tool.Circle) itemType = "circle";
 
-      setStrokes((prev) => [
-        ...prev,
+      setCanvasData([
+        ...canvasData,
         {
           type: itemType,
           points: [[x, y]],
@@ -263,24 +297,22 @@ export default function Drawing() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    setStrokes((prev) => {
-      const updated = [...prev];
-      const last = updated[updated.length - 1];
-      if (last) {
-        if (last.type === "brush") {
-          updated[updated.length - 1] = {
-            ...last,
-            points: [...last.points, [x, y]],
-          };
-        } else {
-          updated[updated.length - 1] = {
-            ...last,
-            points: [last.points[0]!, [x, y]],
-          };
-        }
+    const updated = [...canvasData];
+    const last = updated[updated.length - 1];
+    if (last) {
+      if (last.type === "brush") {
+        updated[updated.length - 1] = {
+          ...last,
+          points: [...last.points, [x, y]],
+        };
+      } else {
+        updated[updated.length - 1] = {
+          ...last,
+          points: [last.points[0]!, [x, y]],
+        };
       }
-      return updated;
-    });
+    }
+    setCanvasData(updated);
   };
 
   const handlePointerUp = () => {
@@ -288,19 +320,17 @@ export default function Drawing() {
   };
 
   const handleUndo = () => {
-    setStrokes((prev) => {
-      if (prev.length === 0) return prev;
-      const last = prev[prev.length - 1]!;
-      setRedoStack((redo) => [...redo, last]);
-      return prev.slice(0, -1);
-    });
+    if (canvasData.length === 0) return;
+    const last = canvasData[canvasData.length - 1]!;
+    setRedoStack((redo) => [...redo, last]);
+    setCanvasData(canvasData.slice(0, -1));
   };
 
   const handleRedo = () => {
     setRedoStack((redo) => {
       if (redo.length === 0) return redo;
       const last = redo[redo.length - 1]!;
-      setStrokes((prev) => [...prev, last]);
+      setCanvasData([...canvasData, last]);
       return redo.slice(0, -1);
     });
   };
@@ -324,7 +354,7 @@ export default function Drawing() {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, 500, 500);
 
-    renderDrawingItems(ctx, strokes, isDark, 500, 500);
+    renderDrawingItems(ctx, canvasData, isDark, 500, 500);
 
     return canvas.toDataURL("image/png");
   };
@@ -356,7 +386,7 @@ export default function Drawing() {
   };
 
   return (
-    <div className="m-4 flex h-min w-min flex-col items-center rounded-lg border-2 p-4 shadow bg-card text-card-foreground">
+    <div className="bg-card text-card-foreground m-4 flex h-min w-min flex-col items-center rounded-lg border-2 p-4 shadow">
       <div className="flex flex-row items-start gap-2">
         <canvas
           width={500}
@@ -365,14 +395,14 @@ export default function Drawing() {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="bg-accent rounded-lg touch-none"
+          className="bg-accent touch-none rounded-lg"
         />
         <div className="flex flex-col gap-1">
           <Button
             variant="outline"
             size="icon-sm"
             onClick={handleUndo}
-            disabled={strokes.length === 0}
+            disabled={canvasData.length === 0}
             aria-label="Undo"
           >
             <Undo2Icon className="size-3.5" />
@@ -395,26 +425,37 @@ export default function Drawing() {
             <ButtonGroupText asChild>
               <p>Actions</p>
             </ButtonGroupText>
-            <Button variant="outline" size="icon" onClick={() => { setStrokes([]); setRedoStack([]); }}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setCanvasData([]);
+                setRedoStack([]);
+              }}
+            >
               <Trash2Icon />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Export drawing">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Export drawing"
+                >
                   <DownloadCloudIcon />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-40 p-2 flex flex-col gap-1">
+              <PopoverContent className="flex w-40 flex-col gap-1 p-2">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-xs font-medium cursor-pointer"
+                  className="w-full cursor-pointer justify-start text-xs font-medium"
                   onClick={handleDownloadPNG}
                 >
                   Download PNG
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-xs font-medium cursor-pointer"
+                  className="w-full cursor-pointer justify-start text-xs font-medium"
                   onClick={handleDownloadPDF}
                 >
                   Download PDF
@@ -441,8 +482,10 @@ export default function Drawing() {
                   variant="outline"
                   size="icon"
                   className={
-                    activeTool === Tool.Line || activeTool === Tool.Rectangle || activeTool === Tool.Circle
-                      ? "-translate-y-1 border-primary bg-accent"
+                    activeTool === Tool.Line ||
+                    activeTool === Tool.Rectangle ||
+                    activeTool === Tool.Circle
+                      ? "border-primary bg-accent -translate-y-1"
                       : ""
                   }
                   title="Shapes"
@@ -452,7 +495,7 @@ export default function Drawing() {
                   {selectedShapeTool === Tool.Circle && <CircleIcon />}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-36 p-1 flex flex-row gap-1 justify-center bg-card border border-border">
+              <PopoverContent className="bg-card border-border flex w-36 flex-row justify-center gap-1 border p-1">
                 <Button
                   variant={activeTool === Tool.Line ? "default" : "ghost"}
                   size="icon-sm"
@@ -529,10 +572,13 @@ export default function Drawing() {
                   {colors.map(({ name, hex }) => (
                     <div
                       key={name}
-                      className="h-4 w-4 rounded-full border border-border cursor-pointer hover:scale-125 transition-transform"
+                      className="border-border h-4 w-4 cursor-pointer rounded-full border transition-transform hover:scale-125"
                       style={{
                         backgroundColor: hex,
-                        outline: toolSettings.color === hex ? "2px solid var(--ring)" : undefined,
+                        outline:
+                          toolSettings.color === hex
+                            ? "2px solid var(--ring)"
+                            : undefined,
                         outlineOffset: "1px",
                       }}
                       title={name}
@@ -545,8 +591,10 @@ export default function Drawing() {
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-2 pt-1 border-t border-border">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Custom</label>
+                <div className="border-border flex items-center gap-2 border-t pt-1">
+                  <label className="text-muted-foreground text-xs whitespace-nowrap">
+                    Custom
+                  </label>
                   <input
                     type="color"
                     value={toolSettings.color}
@@ -556,9 +604,11 @@ export default function Drawing() {
                         color: e.target.value,
                       }))
                     }
-                    className="h-6 w-8 cursor-pointer rounded border border-border bg-transparent"
+                    className="border-border h-6 w-8 cursor-pointer rounded border bg-transparent"
                   />
-                  <span className="text-xs text-muted-foreground font-mono">{toolSettings.color}</span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    {toolSettings.color}
+                  </span>
                 </div>
               </PopoverContent>
             </Popover>
