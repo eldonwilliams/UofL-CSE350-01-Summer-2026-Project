@@ -14,10 +14,9 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import type { ConnectionData } from "~/lib/useRoom";
 
 type JoinRoomDialogProps = {
-  onConfirm: (data: ConnectionData) => void;
+  onConfirm: (localUser: string, room: string) => void;
   triggerLabel?: string;
 };
 
@@ -33,7 +32,7 @@ export default function JoinRoomDialog({
 
   const handleConfirm = () => {
     if (!canConfirm) return;
-    onConfirm({ localUser: localUser.trim(), room: room.trim() });
+    onConfirm(localUser.trim(), room.trim());
     setOpen(false);
   };
 

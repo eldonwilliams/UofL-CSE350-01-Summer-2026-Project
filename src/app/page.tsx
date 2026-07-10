@@ -1,29 +1,40 @@
 "use client";
 
-import { Link2Icon, LogInIcon, LogOutIcon } from "lucide-react";
-import Drawing, { type CanvasData } from "./_components/Drawing";
-import { Button } from "~/components/ui/button";
+import { REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
+import { Link2Icon, LogOutIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Avatar,
   AvatarBadge,
   AvatarFallback,
   AvatarGroup,
 } from "~/components/ui/avatar";
+import { Button } from "~/components/ui/button";
 import { ThemeToggle } from "~/components/ui/ThemeToggle";
-import useRoom, { type ConnectionData } from "~/lib/useRoom";
-import { REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
+import useRoom from "~/lib/useRoom";
+import Drawing, { type CanvasData } from "./_components/Drawing";
 import JoinRoomDialog from "./_components/JoinRoomDialog";
-import { useState } from "react";
 
 export default function Home() {
-  const [connectionData, setConnectionData] = useState<ConnectionData>({
+  const [connectionData, setConnectionData] = useState<{
+    localUser: string;
+    room: string;
+  }>({
     localUser: "",
     room: "",
   });
 
-  const { roomState, sendUpdate, users, connectionState, connect } =
-    useRoom<CanvasData>({ ...connectionData, defaultState: [] });
+  const { roomState, users, connectionState, connect, sendUpdate } =
+    useRoom<CanvasData>({ ...connectionData, defaultState: [], });
 
+  useEffect(() => {
+    if (connectionData.localUser !== "" && connectionData.room !== "")
+      connect();
+  }, [connectionData, connect]);
+
+  useEffect(() => {
+    console.log(Array.from(roomState))
+  }, [roomState])
 
   return (
     <main className="bg-background text-foreground min-h-screen transition-colors duration-300">
@@ -32,8 +43,12 @@ export default function Home() {
       </div>
       <div className="flex flex-col items-center">
         <p className="pt-4 text-2xl font-bold">Drawing Demo</p>
-        {connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && <Drawing canvas={[roomState ?? [], sendUpdate]} />}
-        {connectionState !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && <Drawing />}
+        {connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && (
+          <Drawing canvas={[Array.from(roomState) ?? [], sendUpdate]} />
+        )}
+        {connectionState !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && (
+          <Drawing />
+        )}
         <div className="flex w-1/2 flex-col">
           <div className="flex flex-row items-center justify-items-start gap-2">
             <p className="text-xl font-bold">My Board</p>
@@ -51,9 +66,8 @@ export default function Home() {
             {connectionState === REALTIME_SUBSCRIBE_STATES.CLOSED && (
               <>
                 <JoinRoomDialog
-                  onConfirm={(connectionData) => {
-                    setConnectionData({ ...connectionData, defaultState: [] });
-                    connect();
+                  onConfirm={(localUser, room) => {
+                    setConnectionData({ localUser, room });
                   }}
                   triggerLabel="Join Room"
                 />
