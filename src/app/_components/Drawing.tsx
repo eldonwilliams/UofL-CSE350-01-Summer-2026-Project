@@ -26,6 +26,16 @@ import {
 import { Slider } from "~/components/ui/slider";
 import { useEyeDropper } from "~/lib/useEyedrop";
 import { jsPDF } from "jspdf";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import useDark from "~/lib/useDark";
 
 /**
  * Supported canvas drawing tools.
@@ -73,13 +83,24 @@ const colors: { name: string; hex: string }[] = [
   { name: "Green", hex: "#22c55e" },
 ];
 
-function resolveColor(original: string, isDark: boolean): string {
-  if (isDark && (original === "#000000" || original === "#000"))
-    return "#ffffff";
-  if (!isDark && (original === "#ffffff" || original === "#fff"))
-    return "#000000";
-  return original;
-}
+const filters = [
+  {
+    class: "protanopia-correct",
+    name: "Protanopia",
+  },
+  {
+    class: "deuteranopia-correct",
+    name: "Deuteranopia",
+  },
+  {
+    class: "tritanopia-correct",
+    name: "Tritanopia",
+  },
+  {
+    class: "none",
+    name: "None",
+  },
+];
 
 function distToSegment(
   [px, py]: [number, number],
@@ -96,7 +117,6 @@ function distToSegment(
 function renderDrawingItems(
   ctx: CanvasRenderingContext2D,
   items: DrawingItem[],
-  isDark: boolean,
   width: number,
   height: number,
 ) {
@@ -107,7 +127,7 @@ function renderDrawingItems(
   for (const item of items) {
     if (item.points.length === 0) continue;
 
-    const renderColor = resolveColor(item.color, isDark);
+    const renderColor = item.color;
     ctx.strokeStyle = renderColor;
     ctx.fillStyle = renderColor;
     ctx.lineWidth = item.size * 2;
@@ -157,7 +177,10 @@ export type DrawingProps = {
 export default function Drawing({ canvas }: DrawingProps) {
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
   const [localCanvasData, setLocalCanvasData] = useState<CanvasData>([]);
-  const [canvasData, setCanvasData] = canvas ?? [localCanvasData, setLocalCanvasData];
+  const [canvasData, setCanvasData] = canvas ?? [
+    localCanvasData,
+    setLocalCanvasData,
+  ];
   const [redoStack, setRedoStack] = useState<DrawingItem[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>(Tool.Brush);
@@ -168,54 +191,22 @@ export default function Drawing({ canvas }: DrawingProps) {
     size: 1,
     color: "#000000",
   });
-  const { color, openPicker } = useEyeDropper();
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    setToolSettings((settings) => {
-      if (
-        isDark &&
-        (settings.color === "#000000" || settings.color === "#000")
-      ) {
-        return { ...settings, color: "#ffffff" };
-      }
-      if (
-        !isDark &&
-        (settings.color === "#ffffff" || settings.color === "#fff")
-      ) {
-        return { ...settings, color: "#000000" };
-      }
-      return settings;
-    });
-  }, [isDark]);
-
-  useEffect(() => {
-    setToolSettings((settings) => ({
-      ...settings,
-      color: color ?? (isDark ? "#ffffff" : "#000000"),
-    }));
-  }, [color, isDark]);
+  const { openPicker } = useEyeDropper();
+  const [filter, setFilter] = useState<string>("");
+  const isDark = useDark();
 
   useEffect(() => {
     const ctx = drawingCanvasRef.current?.getContext("2d");
     if (!ctx) return;
-    renderDrawingItems(ctx, canvasData, isDark, 500, 500);
-  }, [canvasData, drawingCanvasRef, isDark]);
+    ctx.filter = `${isDark ? "invert(100%)" : ''} url(#${filter})`;
+    renderDrawingItems(ctx, canvasData, 500, 500);
+  }, [isDark, filter]);
+
+  useEffect(() => {
+    const ctx = drawingCanvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    renderDrawingItems(ctx, canvasData, 500, 500);
+  }, [canvasData, drawingCanvasRef]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = drawingCanvasRef.current?.getBoundingClientRect();
@@ -351,7 +342,7 @@ export default function Drawing({ canvas }: DrawingProps) {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, 500, 500);
 
-    renderDrawingItems(ctx, canvasData, isDark, 500, 500);
+    renderDrawingItems(ctx, canvasData, 500, 500);
 
     return canvas.toDataURL("image/png");
   };
@@ -606,6 +597,30 @@ export default function Drawing({ canvas }: DrawingProps) {
                   <span className="text-muted-foreground font-mono text-xs">
                     {toolSettings.color}
                   </span>
+                </div>
+                <div className="flex flex-row items-center gap-2">
+                  <p className="text-muted-foreground">Filter: </p>
+                  <Select
+                    onValueChange={setFilter}
+                    value={
+                      filters.filter(({ class: f }) => f === filter).pop()
+                        ?.class
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Filters</SelectLabel>
+                        {filters.map(({ name, class: filter }) => (
+                          <SelectItem key={name} value={filter}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </div>
               </PopoverContent>
             </Popover>

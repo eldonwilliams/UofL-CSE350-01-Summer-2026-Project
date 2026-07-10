@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
@@ -139,4 +140,18 @@
   html {
     @apply font-sans;
   }
+}
+
+.protanopia-correction {
+  filter: url(#protanopia-correct);
+}
+.deuteranopia-correction {
+  filter: url(#deuteranopia-correct);
+}
+.tritanopia-correction {
+  filter: url(#tritanopia-correct);
+}
+
+.dark canvas {
+    filter: invert(100%);
 }
