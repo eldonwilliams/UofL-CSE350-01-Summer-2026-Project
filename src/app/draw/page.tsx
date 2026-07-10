@@ -6,23 +6,26 @@ import { useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { ButtonGroup } from "~/components/ui/button-group";
 import { lerpClamped } from "~/lib/utils";
+import { ThemeToggle } from "~/components/ui/ThemeToggle";
 
 export default function DrawPage() {
   const [mousePosition] = useMouse();
   const buttonGroupRef = useRef<HTMLDivElement>(null);
 
   return (
-    <main>
+    <main className="relative min-h-screen bg-background text-foreground transition-colors duration-300 overflow-hidden">
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div
         style={{
-          backgroundColor: "#ffffff",
-          opacity: 0.5,
+          backgroundColor: "var(--grid-bg)",
           backgroundImage:
-            "linear-gradient(#000000 2px, transparent 2px), linear-gradient(90deg, #000000 2px, transparent 2px), linear-gradient(#000000 1px, transparent 1px), linear-gradient(90deg, #000000 1px, #ffffff 1px)",
+            "linear-gradient(var(--grid-line-major) 2px, transparent 2px), linear-gradient(90deg, var(--grid-line-major) 2px, transparent 2px), linear-gradient(var(--grid-line-minor) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line-minor) 1px, var(--grid-bg) 1px)",
           backgroundSize: "50px 50px, 50px 50px, 10px 10px, 10px 10px",
           backgroundPosition: "-2px -2px, -2px -2px, -1px -1px, -1px -1px",
         }}
-        className="h-[100vh] w-full"
+        className="h-[100vh] w-full transition-colors duration-300"
       ></div>
       <div className="drop-shadow-accent absolute top-8 left-1/2 -translate-x-1/2 -translate-y-1/2">
         <ButtonGroup
@@ -33,9 +36,9 @@ export default function DrawPage() {
               1,
               Math.hypot(
                 mousePosition.x -
-                  (buttonGroupRef.current?.getBoundingClientRect().left ?? 0),
+                (buttonGroupRef.current?.getBoundingClientRect().left ?? 0),
                 mousePosition.y -
-                  (buttonGroupRef.current?.getBoundingClientRect().top ?? 0),
+                (buttonGroupRef.current?.getBoundingClientRect().top ?? 0),
               ) / 200,
             ),
           }}
