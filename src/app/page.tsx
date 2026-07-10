@@ -51,7 +51,7 @@ export default function Home() {
         )}
         <div className="flex w-1/2 flex-col">
           <div className="flex flex-row items-center justify-items-start gap-2">
-            <p className="text-xl font-bold">My Board</p>
+            <p className="text-xl font-bold">{connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED ? connectionData.room : "My Board"}</p>
             <p className="text-accent-foreground font-light">{`${users.length}/10`}</p>
             {connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && (
               <>
@@ -69,7 +69,7 @@ export default function Home() {
                   onConfirm={(localUser, room) => {
                     setConnectionData({ localUser, room });
                   }}
-                  triggerLabel="Join Room"
+                  triggerLabel="Join/Create Room"
                 />
               </>
             )}
