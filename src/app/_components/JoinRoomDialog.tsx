@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 "use client";
 
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,8 @@ export default function JoinRoomDialog({
   onConfirm,
   triggerLabel = "Join room",
 }: JoinRoomDialogProps) {
+  const searchParams = useSearchParams();
+  
   const [open, setOpen] = useState(false);
   const [localUser, setLocalUser] = useState("");
   const [room, setRoom] = useState("");
@@ -35,6 +38,14 @@ export default function JoinRoomDialog({
     onConfirm(localUser.trim(), room.trim());
     setOpen(false);
   };
+
+  useEffect(() => {
+    if (searchParams.has("room") || searchParams.has("user")) {
+      setLocalUser(searchParams.get("user") ?? "");
+      setRoom(searchParams.get("room") ?? "");
+      setOpen(true);
+    }
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

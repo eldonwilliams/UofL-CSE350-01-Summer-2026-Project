@@ -14,8 +14,9 @@ import { ThemeToggle } from "~/components/ui/ThemeToggle";
 import useRoom from "~/lib/useRoom";
 import Drawing, { type CanvasData } from "./_components/Drawing";
 import JoinRoomDialog from "./_components/JoinRoomDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
 
-export default function Home() {
+export default function Home() {  
   const [connectionData, setConnectionData] = useState<{
     localUser: string;
     room: string;
@@ -55,9 +56,20 @@ export default function Home() {
             <p className="text-accent-foreground font-light">{`${users.length}/10`}</p>
             {connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && (
               <>
+                <Dialog>
+                  <DialogTrigger asChild>
                 <Button>
                   <Link2Icon /> Share
-                </Button>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Share Link</DialogTitle>
+                    </DialogHeader>
+                    <p className="font-mono rounded px-4 py-2 bg-secondary">{`${window.location.origin}/?room=${connectionData.room}`}</p>
+                    <p>Anyone who visits this link will be automatically prompted for a username to join your active room.</p>
+                  </DialogContent>
+                </Dialog>
                 <Button variant="destructive">
                   <LogOutIcon /> Leave
                 </Button>
