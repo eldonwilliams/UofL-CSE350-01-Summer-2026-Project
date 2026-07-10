@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 "use client";
 
 import { useState } from "react";
@@ -53,6 +54,7 @@ export default function JoinRoomDialog({
         <Input
           id="username"
           value={localUser}
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           onChange={(e) => setLocalUser(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
           placeholder="e.g. eldon"
@@ -62,6 +64,7 @@ export default function JoinRoomDialog({
         <Input
           id="room-key"
           value={room}
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           onChange={(e) => setRoom(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
           placeholder="e.g. lobby"

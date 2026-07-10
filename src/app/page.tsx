@@ -32,12 +32,8 @@ export default function Home() {
       </div>
       <div className="flex flex-col items-center">
         <p className="pt-4 text-2xl font-bold">Drawing Demo</p>
-        <Drawing
-          {...(connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && {
-            canvas: roomState,
-            canvasUpdate: sendUpdate,
-          })}
-        />
+        {connectionState === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && <Drawing canvas={[roomState ?? [], sendUpdate]} />}
+        {connectionState !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && <Drawing />}
         <div className="flex w-1/2 flex-col">
           <div className="flex flex-row items-center justify-items-start gap-2">
             <p className="text-xl font-bold">My Board</p>

@@ -150,17 +150,14 @@ function renderDrawingItems(
 }
 
 export type DrawingProps = {
-  canvas?: CanvasData; // The canvas to be rendered onto the drawing
-  canvasUpdate?: (data: CanvasData) => void; // Recieves updates regarding the rendered data, should update canvas
+  canvas?: [CanvasData, (data: CanvasData) => void]; // The canvas to be rendered onto the drawing
 };
 
 // Reusable component for drawing on a canvas element.
-export default function Drawing({ canvas, canvasUpdate }: DrawingProps) {
+export default function Drawing({ canvas }: DrawingProps) {
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null);
   const [localCanvasData, setLocalCanvasData] = useState<CanvasData>([]);
-  const [canvasData, setCanvasData] = canvas
-    ? [canvas, canvasUpdate]
-    : [localCanvasData, setLocalCanvasData];
+  const [canvasData, setCanvasData] = canvas ?? [localCanvasData, setLocalCanvasData];
   const [redoStack, setRedoStack] = useState<DrawingItem[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>(Tool.Brush);
